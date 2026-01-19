@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:18.1
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: PISSIR
+      POSTGRES_DB: mydb
+    ports:
+      - "8000:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

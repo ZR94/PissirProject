@@ -1,0 +1,57 @@
+# Admin (debug / full access)
+user admin
+topic read  #
+topic write #
+
+# Toll (tutti i microservizi casello: entry/exit manual/telepass)
+user toll
+topic write highway/+/entry/manual/events
+topic write highway/+/entry/telepass/events
+topic write highway/+/exit/manual/events
+topic write highway/+/exit/telepass/events
+topic write highway/+/exit/manual/state
+topic write highway/requests/tollprice
+topic write highway/+/entry/camera/requests
+topic write highway/+/exit/camera/requests
+
+topic read  highway/+/entry/manual/commands
+topic read  highway/+/entry/telepass/commands
+topic read  highway/+/exit/manual/commands
+topic read  highway/+/exit/telepass/commands
+
+topic read  highway/+/entry/manual/responses
+topic read  highway/+/entry/telepass/responses
+topic read  highway/+/exit/manual/responses
+topic read  highway/+/exit/telepass/responses
+
+# Camera (microservizio telecamera)
+user camera
+topic read  highway/+/entry/camera/requests
+topic read  highway/+/exit/camera/requests
+
+topic write highway/+/entry/manual/responses
+topic write highway/+/entry/telepass/responses
+topic write highway/+/exit/manual/responses
+topic write highway/+/exit/telepass/responses
+
+# User (simulatore guidatore/telepass)
+user user
+topic write highway/+/entry/manual/commands
+topic write highway/+/entry/telepass/commands
+topic write highway/+/exit/manual/commands
+topic write highway/+/exit/telepass/commands
+
+topic read  highway/+/exit/manual/state
+
+# Server (management server)
+user server
+topic read  highway/+/entry/manual/events
+topic read  highway/+/entry/telepass/events
+topic read  highway/+/exit/manual/events
+topic read  highway/+/exit/telepass/events
+topic read  highway/requests/tollprice
+
+topic write highway/+/exit/manual/responses
+topic write highway/+/exit/telepass/responses
+topic write highway/+/entry/manual/responses
+topic write highway/+/entry/telepass/responses

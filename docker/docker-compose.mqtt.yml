@@ -1,0 +1,15 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0.18
+    container_name: mosquitto_broker
+    restart: unless-stopped
+    ports:
+      - "8001:1883"     # MQTT port
+      - "8002:8883"     # MQTT TLS port
+      - "9001:9001"     # WebSocket port
+    volumes:
+      - /home/robert/myprojects/PissirProject/docker/mosquitto/config:/mosquitto/config
+      - /home/robert/myprojects/PissirProject/docker/mosquitto/data:/mosquitto/data
+      - /home/robert/myprojects/PissirProject/docker/mosquitto/log:/mosquitto/log
+      - /home/robert/myprojects/PissirProject/docker/mosquitto/certs:/mosquitto/certs
+    command: mosquitto -c /mosquitto/config/mosquitto.conf
