@@ -1,5 +1,3 @@
 package upo.pissir.dto;
 
-public class ErrorResponse {
-    
-}
+public record ErrorResponse(String code, String message) {}

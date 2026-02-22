@@ -3,6 +3,7 @@ package upo.pissir.auth;
 import com.nimbusds.jwt.JWTClaimsSet;
 import io.javalin.http.Context;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +30,8 @@ public final class Auth {
     String sub = claims.getSubject();
     String username = safeString(claims.getClaim("preferred_username"));
 
-    List<String> roles = extractRealmRoles(claims);
+    List<String> realmRoles = extractRealmRoles(claims);
+    List<String> roles = mapToAppRoles(realmRoles);
 
     return new AuthUser(sub, username, roles);
   }
@@ -39,6 +41,14 @@ public final class Auth {
       ctx.status(403).json(Map.of("error", "forbidden"));
       throw new Halt();
     }
+  }
+
+  public static void requireAnyRole(Context ctx, AuthUser user, Role... roles) {
+    for (Role role : roles) {
+      if (user.hasRole(role.name())) return;
+    }
+    ctx.status(403).json(Map.of("error", "forbidden"));
+    throw new Halt();
   }
 
   private static List<String> extractRealmRoles(JWTClaimsSet claims) {
@@ -52,10 +62,36 @@ public final class Auth {
     return List.of();
   }
 
+  private static List<String> mapToAppRoles(List<String> realmRoles) {
+    String customerRole = envOrDefault("KC_ROLE_CUSTOMER", "customers");
+    String employeeRole = envOrDefault("KC_ROLE_EMPLOYEE", "employees");
+    String administratorRole = envOrDefault("KC_ROLE_ADMINISTRATOR", "administrators");
+
+    List<String> out = new ArrayList<>();
+    for (String role : realmRoles) {
+      if (role == null) continue;
+
+      if (Role.CUSTOMER.name().equalsIgnoreCase(role) || customerRole.equalsIgnoreCase(role)) {
+        out.add(Role.CUSTOMER.name());
+      }
+      if (Role.EMPLOYEE.name().equalsIgnoreCase(role) || employeeRole.equalsIgnoreCase(role)) {
+        out.add(Role.EMPLOYEE.name());
+      }
+      if (Role.ADMINISTRATOR.name().equalsIgnoreCase(role) || administratorRole.equalsIgnoreCase(role)) {
+        out.add(Role.ADMINISTRATOR.name());
+      }
+    }
+    return out;
+  }
+
+  private static String envOrDefault(String key, String defaultValue) {
+    String value = System.getenv(key);
+    return value == null || value.isBlank() ? defaultValue : value;
+  }
+
   private static String safeString(Object o) {
     return (o instanceof String s) ? s : null;
   }
 
   public static final class Halt extends RuntimeException {}
 }
-

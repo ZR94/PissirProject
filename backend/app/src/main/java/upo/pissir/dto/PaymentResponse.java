@@ -1,5 +1,11 @@
 package upo.pissir.dto;
 
-public class PaymentResponse {
-    
-}
+public record PaymentResponse(
+        long id,
+        String telepassId,
+        long tripId,
+        int amountCents,
+        String currency,
+        String status,
+        String createdAt
+) {}

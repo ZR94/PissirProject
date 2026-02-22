@@ -1,5 +1,3 @@
 package upo.pissir.dto;
 
-public class TollCalculateResponse {
-    
-}
+public record TollCalculateResponse(String entryTollboothId, String exitTollboothId, int amountCents, String currency) {}

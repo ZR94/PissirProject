@@ -7,7 +7,11 @@ import upo.pissir.mqtt.MqttConfig;
 import upo.pissir.mqtt.MqttListenerService;
 import upo.pissir.repo.FareRepository;
 import upo.pissir.repo.TelepassDebtRepository;
+import upo.pissir.repo.TollboothRepository;
 import upo.pissir.repo.TripRepository;
+import upo.pissir.service.InfrastructureService;
+import upo.pissir.service.PaymentService;
+import upo.pissir.service.TollQueryService;
 import upo.pissir.service.TollProcessingService;
 import upo.pissir.db.Db;
 
@@ -20,16 +24,20 @@ public class Main {
         HikariDataSource ds = (HikariDataSource) Db.createDataSource();
         SchemaInitializer.init(ds);
 
-        // 2) HTTP
-        int httpPort = upo.pissir.config.AppConfig.httpPort();
-        HttpServer.start(httpPort);
-
-        // 3) Repos + Service
+        // 2) Repos + Service
         FareRepository fareRepo = new FareRepository(ds);
         TripRepository tripRepo = new TripRepository(ds);
         TelepassDebtRepository debtRepo = new TelepassDebtRepository(ds);
+        TollboothRepository tollboothRepo = new TollboothRepository(ds);
 
+        InfrastructureService infrastructureService = new InfrastructureService(tollboothRepo, fareRepo);
+        TollQueryService tollQueryService = new TollQueryService(fareRepo);
+        PaymentService paymentService = new PaymentService(debtRepo, tripRepo);
         TollProcessingService processingService = new TollProcessingService(fareRepo, tripRepo, debtRepo);
+
+        // 3) HTTP
+        int httpPort = upo.pissir.config.AppConfig.httpPort();
+        HttpServer.start(httpPort, infrastructureService, tollQueryService, paymentService);
 
         // 4) MQTT Listener
         MqttConfig mqttConfig = MqttConfig.fromEnv();

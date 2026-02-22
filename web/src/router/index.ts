@@ -15,7 +15,7 @@ const router = createRouter({
       path: '/admin',
       name: 'admin',
       component: () => import('../views/AboutView.vue'),
-      meta: { auth: true, role: 'admin' }
+      meta: { auth: true, role: 'administrators' }
     },
     {
       path: '/about',

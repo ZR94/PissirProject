@@ -25,14 +25,12 @@ public class Main {
         mqtt.subscribe("highway/+/exit/+/commands", 1, service::onCommand);
 
         // Responses for toll price requests (replyTopic is fixed by this service)
-        mqtt.subscribe(service.tollPriceReplyTopic(tollId), 1, service::onTollPriceResponse);
+        mqtt.subscribe(service.tollPriceReplyTopic("manual"), 1, service::onTollPriceResponse);
+        mqtt.subscribe(service.tollPriceReplyTopic("telepass"), 1, service::onTollPriceResponse);
 
         // Camera responses (replyTopic is fixed by this service)
         mqtt.subscribe("highway/" + tollId + "/entry/manual/responses", 1, service::onCameraResponse);
         mqtt.subscribe("highway/" + tollId + "/entry/telepass/responses", 1, service::onCameraResponse);
-
-        mqtt.subscribe("highway/" + tollId + "/exit/manual/responses", 1, service::onTollPriceResponse);
-        mqtt.subscribe("highway/" + tollId + "/exit/telepass/responses", 1, service::onTollPriceResponse);
 
         System.out.println("TollService started. tollId=" + tollId);
 

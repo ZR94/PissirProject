@@ -1,5 +1,3 @@
 package upo.pissir.dto;
 
-public class CreateFareRequest {
-    
-}
+public record CreateFareRequest(String entryTollboothId, String exitTollboothId, Integer amountCents) {}

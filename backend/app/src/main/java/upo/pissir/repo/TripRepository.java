@@ -94,5 +94,27 @@ public class TripRepository {
             throw new IllegalStateException("closeTrip failed", e);
         }
     }
-}
 
+    public boolean markTripPaid(long tripId) {
+        String sql = "UPDATE trips SET paid = true WHERE id = ?";
+        try (Connection c = ds.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, tripId);
+            return ps.executeUpdate() == 1;
+        } catch (SQLException e) {
+            throw new IllegalStateException("markTripPaid failed", e);
+        }
+    }
+
+    public long sumCollectedCents() {
+        String sql = "SELECT COALESCE(SUM(amount_cents), 0) FROM trips WHERE paid = true AND amount_cents IS NOT NULL";
+        try (Connection c = ds.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (!rs.next()) return 0L;
+            return rs.getLong(1);
+        } catch (SQLException e) {
+            throw new IllegalStateException("sumCollectedCents failed", e);
+        }
+    }
+}

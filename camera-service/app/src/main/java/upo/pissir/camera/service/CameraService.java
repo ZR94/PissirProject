@@ -24,6 +24,7 @@ public class CameraService {
         String tollboothId = p[1];
         String direction = p[2];
         if (!"camera".equals(p[3]) || !"requests".equals(p[4])) return;
+        if (!"entry".equals(direction) && !"exit".equals(direction)) return;
 
         Map<String, Object> body = Json.parseToMap(payloadJson);
         String type = Json.getString(body, "type");
@@ -68,4 +69,3 @@ public class CameraService {
         return 0.90 + (rnd.nextDouble() * 0.09);
     }
 }
-

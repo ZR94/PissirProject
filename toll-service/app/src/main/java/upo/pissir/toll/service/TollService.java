@@ -173,7 +173,7 @@ public class TollService {
             String passId = Json.getString(cmd, "ticketId");
             if (passId == null) passId = Json.getString(cmd, "passId"); // fallback legacy
             Integer amountCents = Json.getInt(cmd, "amountCents");
-            if (passId == null || amountCents == null) return;
+            if (passId == null || amountCents == null || amountCents <= 0) return;
 
             SessionStore.Session s = store.get(passId);
             if (s == null) return;
@@ -221,6 +221,7 @@ public class TollService {
         if ("manual".equals(channel)) req.put("ticketId", passId);
         if ("telepass".equals(channel)) req.put("telepassId", passId);
 
+        if (!"TOLLPRICE_REQUEST".equals(Json.getString(req, "type"))) return;
         mqtt.publish("highway/requests/tollprice", Json.toJson(req), 1);
     }
 
@@ -273,4 +274,3 @@ public class TollService {
         mqtt.publish("highway/" + tollId + "/" + direction + "/" + channel + "/state", Json.toJson(state), 1);
     }
 }
-
