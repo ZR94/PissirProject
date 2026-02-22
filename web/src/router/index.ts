@@ -1,29 +1,39 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import  { useAuthStore }  from "@/stores/auth";
+import { createRouter, createWebHistory } from "vue-router";
+import DashboardView from "../views/DashboardView.vue";
+import { useAuthStore } from "@/stores/auth";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
-      path: '/',
-      name: 'home',
-      component: HomeView,
-      meta: { auth: true }
+      path: "/",
+      name: "dashboard",
+      component: DashboardView,
+      meta: { auth: true },
     },
     {
-      path: '/admin',
-      name: 'admin',
-      component: () => import('../views/AboutView.vue'),
-      meta: { auth: true, role: 'administrators' }
+      path: "/toll",
+      name: "toll",
+      component: () => import("../views/TollView.vue"),
+      meta: { auth: true, roles: ["employees", "administrators"] },
     },
     {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
+      path: "/infrastructure",
+      name: "infrastructure",
+      component: () => import("../views/InfrastructureView.vue"),
+      meta: { auth: true, roles: ["employees", "administrators"] },
+    },
+    {
+      path: "/payments",
+      name: "payments",
+      component: () => import("../views/PaymentsView.vue"),
+      meta: { auth: true, roles: ["customers", "employees", "administrators"] },
+    },
+    {
+      path: "/admin",
+      name: "admin",
+      component: () => import("../views/AboutView.vue"),
+      meta: { auth: true, roles: ["administrators"] },
     },
   ],
 });
@@ -37,12 +47,12 @@ router.beforeEach((to) => {
     return false;
   }
 
-  const requiredRole = to.meta.role as string | undefined;
-  if (requiredRole && !auth.hasRole(requiredRole)) {
+  const requiredRoles = to.meta.roles as string[] | undefined;
+  if (requiredRoles && !auth.hasAnyRole(requiredRoles)) {
     return { path: "/" };
   }
 
   return true;
 });
 
-export default router
+export default router;

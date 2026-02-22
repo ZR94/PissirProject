@@ -33,8 +33,30 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main>
-    <h1>Admin</h1>
+  <main class="card">
+    <h1>Admin Health</h1>
     <pre>{{ msg }}</pre>
   </main>
 </template>
+
+<style scoped>
+.card {
+  background: #fff;
+  border: 1px solid #d4dee8;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+pre {
+  margin-top: 0.75rem;
+  background: #f6f8fb;
+  border: 1px solid #e1e8f0;
+  border-radius: 8px;
+  padding: 0.7rem;
+  overflow: auto;
+}
+</style>

@@ -28,6 +28,9 @@ export const useAuthStore = defineStore("auth", {
     hasRole(role: string): boolean {
       return this.roles.includes(role);
     },
+    hasAnyRole(roles: string[]): boolean {
+      return roles.some((role) => this.roles.includes(role));
+    },
     login() {
       getKeycloak().login();
     },
