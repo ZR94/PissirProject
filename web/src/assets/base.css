@@ -1,10 +1,26 @@
 :root {
   --font-main:
     "IBM Plex Sans",
+    "Manrope",
     "Avenir Next",
     "Segoe UI",
-    "Helvetica Neue",
     sans-serif;
+  --font-display:
+    "Space Grotesk",
+    "IBM Plex Sans",
+    sans-serif;
+
+  --bg-0: oklch(0.985 0.009 236);
+  --bg-1: oklch(0.962 0.02 230);
+  --ink-0: oklch(0.26 0.04 244);
+  --ink-1: oklch(0.46 0.03 236);
+  --line-0: oklch(0.82 0.03 236);
+  --brand-cobalt: oklch(0.58 0.14 252);
+  --brand-teal: oklch(0.65 0.11 203);
+  --brand-moss: oklch(0.69 0.12 150);
+  --state-ok: oklch(0.58 0.13 154);
+  --state-warn: oklch(0.67 0.12 78);
+  --state-err: oklch(0.58 0.16 28);
 }
 
 *,
@@ -16,8 +32,11 @@
 
 body {
   min-height: 100vh;
-  color: #0f2c44;
-  background: #f8fbff;
+  color: var(--ink-0);
+  background:
+    radial-gradient(80% 65% at 100% -5%, color-mix(in oklab, var(--brand-teal) 16%, transparent), transparent 70%),
+    radial-gradient(65% 55% at -8% 0%, color-mix(in oklab, var(--brand-cobalt) 14%, transparent), transparent 72%),
+    linear-gradient(170deg, var(--bg-0), var(--bg-1));
   line-height: 1.6;
   font-family: var(--font-main);
   font-size: 15px;

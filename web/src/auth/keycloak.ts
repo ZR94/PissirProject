@@ -9,6 +9,7 @@ const keycloak = new Keycloak({
 export async function initKeycloak(): Promise<boolean> {
   return keycloak.init({
     onLoad: "login-required",
+    redirectUri: `${window.location.origin}/`,
     pkceMethod: "S256",
     checkLoginIframe: false,
     responseMode: "query",

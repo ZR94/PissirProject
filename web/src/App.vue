@@ -2,13 +2,24 @@
 import { computed } from "vue";
 import { RouterLink, RouterView } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { roleLabel, visibleRolesForUi } from "@/utils/roles";
 
 const auth = useAuthStore();
 
 const isEmployeeOrAdmin = computed(() =>
   auth.hasAnyRole(["employees", "administrators"]),
 );
-const isAdmin = computed(() => auth.hasRole("administrators"));
+const visibleRoleText = computed(() => {
+  const roles = visibleRolesForUi(auth.roles).map(roleLabel);
+  return roles.join(", ");
+});
+
+const greeting = computed(() => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+});
 </script>
 
 <template>
@@ -20,8 +31,9 @@ const isAdmin = computed(() => auth.hasRole("administrators"));
       </div>
       <div class="session">
         <div class="identity">
-          <strong>{{ auth.username }}</strong>
-          <small>{{ auth.roles.join(", ") || "no-roles" }}</small>
+          <strong>{{ auth.username || "User" }}</strong>
+          <small class="welcome">{{ greeting }}</small>
+          <small v-if="visibleRoleText" class="roles">{{ visibleRoleText }}</small>
         </div>
         <button class="btn" @click="auth.logout()">Logout</button>
       </div>
@@ -32,7 +44,6 @@ const isAdmin = computed(() => auth.hasRole("administrators"));
       <RouterLink v-if="isEmployeeOrAdmin" to="/toll">Toll</RouterLink>
       <RouterLink v-if="isEmployeeOrAdmin" to="/infrastructure">Infrastructure</RouterLink>
       <RouterLink to="/payments">Payments</RouterLink>
-      <RouterLink v-if="isAdmin" to="/admin">Admin</RouterLink>
     </nav>
 
     <main class="content">
@@ -44,18 +55,22 @@ const isAdmin = computed(() => auth.hasRole("administrators"));
 <style scoped>
 .app-shell {
   min-height: 100vh;
-  background: linear-gradient(150deg, #f5f9ff 0%, #f0f5f0 45%, #fff9f2 100%);
-  color: #123;
+  background: transparent;
+  color: oklch(0.27 0.045 244);
 }
 
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid #d5e0ea;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(4px);
+  margin: 0.95rem 1rem 0.5rem;
+  padding: 0.95rem 1.05rem;
+  border: 1px solid oklch(0.83 0.03 236);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, oklch(0.985 0.01 236), oklch(0.965 0.016 232));
+  box-shadow: 0 18px 34px -34px color-mix(in oklab, oklch(0.58 0.14 252) 52%, transparent);
+  animation: fade-rise 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .brand {
@@ -66,17 +81,21 @@ const isAdmin = computed(() => auth.hasRole("administrators"));
 
 .brand h1 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: clamp(1.04rem, 0.5vw + 0.92rem, 1.22rem);
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 .badge {
-  background: #164863;
-  color: #fff;
+  background:
+    linear-gradient(140deg, color-mix(in oklab, var(--brand-cobalt) 84%, black 16%), color-mix(in oklab, var(--brand-teal) 74%, black 26%));
+  color: oklch(0.98 0.004 240);
   font-weight: 700;
   font-size: 0.75rem;
-  letter-spacing: 0.04em;
-  padding: 0.3rem 0.55rem;
+  letter-spacing: 0.065em;
+  padding: 0.32rem 0.58rem;
   border-radius: 999px;
+  box-shadow: 0 10px 20px -16px color-mix(in oklab, var(--brand-cobalt) 72%, transparent);
 }
 
 .session {
@@ -94,50 +113,75 @@ const isAdmin = computed(() => auth.hasRole("administrators"));
 
 .identity strong {
   font-size: 0.92rem;
+  line-height: 1.2;
 }
 
-.identity small {
-  font-size: 0.73rem;
-  color: #4d667a;
+.welcome {
+  font-size: 0.72rem;
+  color: oklch(0.49 0.03 236);
+  letter-spacing: 0.02em;
+}
+
+.roles {
+  font-size: 0.72rem;
+  color: color-mix(in oklab, oklch(0.49 0.03 236) 84%, var(--brand-teal) 16%);
 }
 
 .btn {
   border: 0;
-  background: #1d5b79;
-  color: #fff;
-  border-radius: 8px;
-  padding: 0.4rem 0.7rem;
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--brand-cobalt) 86%, black 14%), color-mix(in oklab, var(--brand-teal) 74%, black 26%));
+  color: oklch(0.985 0.003 240);
+  border-radius: 10px;
+  padding: 0.43rem 0.78rem;
   font-weight: 600;
   cursor: pointer;
+  transition:
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px -16px color-mix(in oklab, var(--brand-cobalt) 72%, transparent);
 }
 
 .nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
+  gap: 0.52rem;
+  padding: 0.15rem 1rem 0.35rem;
+  animation: fade-rise 430ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .nav a {
   text-decoration: none;
-  border: 1px solid #c8d9e8;
-  border-radius: 8px;
-  padding: 0.3rem 0.6rem;
-  color: #13354e;
-  background: #ffffff;
+  border: 1px solid color-mix(in oklab, oklch(0.82 0.03 236) 84%, var(--brand-cobalt) 16%);
+  border-radius: 999px;
+  padding: 0.28rem 0.7rem;
+  color: oklch(0.31 0.05 244);
+  background: color-mix(in oklab, oklch(0.985 0.008 236) 90%, var(--brand-teal) 10%);
+  font-size: 0.87rem;
+  transition:
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.nav a.router-link-exact-active {
-  background: #d9edf8;
-  border-color: #86b7d4;
+.nav a:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, oklch(0.82 0.03 236) 70%, var(--brand-cobalt) 30%);
+  background: color-mix(in oklab, oklch(0.985 0.008 236) 80%, var(--brand-teal) 20%);
 }
 
 .content {
-  padding: 1rem 1.25rem 1.5rem;
+  padding: 0.85rem 1rem 1.5rem;
+  animation: fade-rise 520ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (max-width: 768px) {
   .topbar {
+    margin: 0.7rem 0.75rem 0.45rem;
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
@@ -150,6 +194,25 @@ const isAdmin = computed(() => auth.hasRole("administrators"));
 
   .identity {
     text-align: left;
+  }
+
+  .nav {
+    padding: 0.15rem 0.75rem 0.35rem;
+  }
+
+  .content {
+    padding: 0.8rem 0.75rem 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar,
+  .nav,
+  .content,
+  .btn,
+  .nav a {
+    animation: none;
+    transition: none;
   }
 }
 </style>

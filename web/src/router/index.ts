@@ -29,12 +29,6 @@ const router = createRouter({
       component: () => import("../views/PaymentsView.vue"),
       meta: { auth: true, roles: ["customers", "employees", "administrators"] },
     },
-    {
-      path: "/admin",
-      name: "admin",
-      component: () => import("../views/AboutView.vue"),
-      meta: { auth: true, roles: ["administrators"] },
-    },
   ],
 });
 
