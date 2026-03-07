@@ -6,17 +6,71 @@
 
 -- Optional: elenco caselli gestiti (utile per validazione e seed)
 CREATE TABLE IF NOT EXISTS tollbooths (
-  id TEXT PRIMARY KEY
+  id TEXT PRIMARY KEY,
+  road_code TEXT,
+  km_marker NUMERIC(8,2),
+  region TEXT,
+  description TEXT
 );
 
-INSERT INTO tollbooths(id) VALUES
-  ('VC_Est'),
-  ('VC_Ovest'),
-  ('AT_Est'),
-  ('AT_Ovest'),
-  ('MI_Est'),
-  ('MI_Ovest')
-ON CONFLICT DO NOTHING;
+ALTER TABLE tollbooths ADD COLUMN IF NOT EXISTS road_code TEXT;
+ALTER TABLE tollbooths ADD COLUMN IF NOT EXISTS km_marker NUMERIC(8,2);
+ALTER TABLE tollbooths ADD COLUMN IF NOT EXISTS region TEXT;
+ALTER TABLE tollbooths ADD COLUMN IF NOT EXISTS description TEXT;
+
+INSERT INTO tollbooths(id, road_code, km_marker, region, description) VALUES
+  ('VC_Est', 'A4', 53.40, 'Piemonte', 'Casello Vercelli Est'),
+  ('VC_Ovest', 'A4', 48.20, 'Piemonte', 'Casello Vercelli Ovest'),
+  ('AT_Est', 'A21', 32.70, 'Piemonte', 'Casello Asti Est'),
+  ('AT_Ovest', 'A21', 24.10, 'Piemonte', 'Casello Asti Ovest'),
+  ('MI_Est', 'A4', 138.60, 'Lombardia', 'Casello Milano Est'),
+  ('MI_Ovest', 'A4', 126.10, 'Lombardia', 'Casello Milano Ovest')
+ON CONFLICT (id) DO UPDATE SET
+  road_code = EXCLUDED.road_code,
+  km_marker = EXCLUDED.km_marker,
+  region = EXCLUDED.region,
+  description = EXCLUDED.description;
+
+-- =========================
+-- Devices (registro dispositivi campo)
+-- =========================
+CREATE TABLE IF NOT EXISTS devices (
+  id BIGSERIAL PRIMARY KEY,
+  tollbooth_id TEXT NOT NULL REFERENCES tollbooths(id) ON DELETE CASCADE,
+  direction TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT chk_devices_direction CHECK (direction IN ('entry', 'exit')),
+  CONSTRAINT chk_devices_channel CHECK (channel IN ('manual', 'telepass', 'camera')),
+  CONSTRAINT uq_devices UNIQUE (tollbooth_id, direction, channel)
+);
+
+CREATE INDEX IF NOT EXISTS idx_devices_tollbooth ON devices(tollbooth_id);
+
+-- =========================
+-- Device faults (guasti dispositivi campo)
+-- =========================
+CREATE TABLE IF NOT EXISTS device_faults (
+  id BIGSERIAL PRIMARY KEY,
+  tollbooth_id TEXT NOT NULL REFERENCES tollbooths(id) ON DELETE CASCADE,
+  direction TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  code TEXT NOT NULL,
+  message TEXT NOT NULL,
+  severity TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'OPEN',
+  backend_action TEXT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  responded_at TIMESTAMPTZ NULL,
+  CONSTRAINT chk_device_faults_direction CHECK (direction IN ('entry', 'exit')),
+  CONSTRAINT chk_device_faults_channel CHECK (channel IN ('manual', 'telepass', 'camera')),
+  CONSTRAINT chk_device_faults_severity CHECK (severity IN ('WARN', 'ERROR')),
+  CONSTRAINT chk_device_faults_status CHECK (status IN ('OPEN', 'RESPONDED'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_device_faults_created_at ON device_faults(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_device_faults_status ON device_faults(status);
 
 -- =========================
 -- Trips (viaggi)
@@ -40,6 +94,8 @@ CREATE TABLE IF NOT EXISTS trips (
   -- risultato economico
   amount_cents INTEGER NULL,
   currency TEXT NOT NULL DEFAULT 'EUR',
+  avg_speed_kmh NUMERIC(8,2) NULL,
+  speeding BOOLEAN NOT NULL DEFAULT FALSE,
 
   -- manual exit: paid=true, telepass exit: paid=false + debito in telepass_debts
   paid BOOLEAN NOT NULL DEFAULT FALSE,
@@ -52,6 +108,9 @@ CREATE TABLE IF NOT EXISTS trips (
     ticket_id IS NOT NULL OR telepass_id IS NOT NULL
   )
 );
+
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS avg_speed_kmh NUMERIC(8,2);
+ALTER TABLE trips ADD COLUMN IF NOT EXISTS speeding BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Indici per lookup rapido dei trip "attivi" (exit_at IS NULL)
 CREATE INDEX IF NOT EXISTS idx_trips_ticket_active

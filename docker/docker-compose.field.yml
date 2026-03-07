@@ -1,0 +1,213 @@
+x-toll-env: &toll-env
+  MQTT_HOST: mosquitto_broker
+  MQTT_PORT: 1883
+  MQTT_TLS: "false"
+  MQTT_USER: toll
+  MQTT_PASS: pissirtoll
+
+x-toll-base: &toll-base
+  image: amazoncorretto:24
+  volumes:
+    - ../toll-service/app/build/libs/TollService.jar:/app/TollService.jar:ro
+  working_dir: /app
+  restart: unless-stopped
+
+x-entry-manual: &entry-manual
+  <<: *toll-base
+  command: java --add-opens java.base/java.net=ALL-UNNAMED -cp TollService.jar upo.pissir.toll.MainEntryManual
+
+x-entry-telepass: &entry-telepass
+  <<: *toll-base
+  command: java --add-opens java.base/java.net=ALL-UNNAMED -cp TollService.jar upo.pissir.toll.MainEntryTelepass
+
+x-exit-manual: &exit-manual
+  <<: *toll-base
+  command: java --add-opens java.base/java.net=ALL-UNNAMED -cp TollService.jar upo.pissir.toll.MainExitManual
+
+x-exit-telepass: &exit-telepass
+  <<: *toll-base
+  command: java --add-opens java.base/java.net=ALL-UNNAMED -cp TollService.jar upo.pissir.toll.MainExitTelepass
+
+services:
+  toll_entry_manual:
+    <<: *entry-manual
+    container_name: toll_entry_manual
+    environment:
+      <<: *toll-env
+      TOLL_ID: MI_Ovest
+
+  toll_entry_telepass:
+    <<: *entry-telepass
+    container_name: toll_entry_telepass
+    environment:
+      <<: *toll-env
+      TOLL_ID: MI_Ovest
+
+  toll_exit_manual:
+    <<: *exit-manual
+    container_name: toll_exit_manual
+    environment:
+      <<: *toll-env
+      TOLL_ID: MI_Ovest
+
+  toll_exit_telepass:
+    <<: *exit-telepass
+    container_name: toll_exit_telepass
+    environment:
+      <<: *toll-env
+      TOLL_ID: MI_Ovest
+
+  toll_entry_manual_vc_est:
+    <<: *entry-manual
+    container_name: toll_entry_manual_vc_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: VC_Est
+
+  toll_entry_telepass_vc_est:
+    <<: *entry-telepass
+    container_name: toll_entry_telepass_vc_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: VC_Est
+
+  toll_exit_manual_vc_est:
+    <<: *exit-manual
+    container_name: toll_exit_manual_vc_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: VC_Est
+
+  toll_exit_telepass_vc_est:
+    <<: *exit-telepass
+    container_name: toll_exit_telepass_vc_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: VC_Est
+
+  toll_entry_manual_vc_ovest:
+    <<: *entry-manual
+    container_name: toll_entry_manual_vc_ovest
+    environment:
+      <<: *toll-env
+      TOLL_ID: VC_Ovest
+
+  toll_entry_telepass_vc_ovest:
+    <<: *entry-telepass
+    container_name: toll_entry_telepass_vc_ovest
+    environment:
+      <<: *toll-env
+      TOLL_ID: VC_Ovest
+
+  toll_exit_manual_vc_ovest:
+    <<: *exit-manual
+    container_name: toll_exit_manual_vc_ovest
+    environment:
+      <<: *toll-env
+      TOLL_ID: VC_Ovest
+
+  toll_exit_telepass_vc_ovest:
+    <<: *exit-telepass
+    container_name: toll_exit_telepass_vc_ovest
+    environment:
+      <<: *toll-env
+      TOLL_ID: VC_Ovest
+
+  toll_entry_manual_at_est:
+    <<: *entry-manual
+    container_name: toll_entry_manual_at_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: AT_Est
+
+  toll_entry_telepass_at_est:
+    <<: *entry-telepass
+    container_name: toll_entry_telepass_at_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: AT_Est
+
+  toll_exit_manual_at_est:
+    <<: *exit-manual
+    container_name: toll_exit_manual_at_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: AT_Est
+
+  toll_exit_telepass_at_est:
+    <<: *exit-telepass
+    container_name: toll_exit_telepass_at_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: AT_Est
+
+  toll_entry_manual_at_ovest:
+    <<: *entry-manual
+    container_name: toll_entry_manual_at_ovest
+    environment:
+      <<: *toll-env
+      TOLL_ID: AT_Ovest
+
+  toll_entry_telepass_at_ovest:
+    <<: *entry-telepass
+    container_name: toll_entry_telepass_at_ovest
+    environment:
+      <<: *toll-env
+      TOLL_ID: AT_Ovest
+
+  toll_exit_manual_at_ovest:
+    <<: *exit-manual
+    container_name: toll_exit_manual_at_ovest
+    environment:
+      <<: *toll-env
+      TOLL_ID: AT_Ovest
+
+  toll_exit_telepass_at_ovest:
+    <<: *exit-telepass
+    container_name: toll_exit_telepass_at_ovest
+    environment:
+      <<: *toll-env
+      TOLL_ID: AT_Ovest
+
+  toll_entry_manual_mi_est:
+    <<: *entry-manual
+    container_name: toll_entry_manual_mi_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: MI_Est
+
+  toll_entry_telepass_mi_est:
+    <<: *entry-telepass
+    container_name: toll_entry_telepass_mi_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: MI_Est
+
+  toll_exit_manual_mi_est:
+    <<: *exit-manual
+    container_name: toll_exit_manual_mi_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: MI_Est
+
+  toll_exit_telepass_mi_est:
+    <<: *exit-telepass
+    container_name: toll_exit_telepass_mi_est
+    environment:
+      <<: *toll-env
+      TOLL_ID: MI_Est
+
+  camera:
+    image: amazoncorretto:24
+    container_name: camera_service
+    environment:
+      MQTT_HOST: mosquitto_broker
+      MQTT_PORT: 1883
+      MQTT_TLS: "false"
+      MQTT_USER: camera
+      MQTT_PASS: pissircamera
+    volumes:
+      - ../camera-service/app/build/libs/CameraService.jar:/app/CameraService.jar:ro
+    working_dir: /app
+    command: java --add-opens java.base/java.net=ALL-UNNAMED -jar CameraService.jar
+    restart: unless-stopped

@@ -7,4 +7,5 @@ public final class MqttTopics {
     public static final String ENTRY_EVENTS = "highway/+/entry/+/events";
     public static final String EXIT_EVENTS  = "highway/+/exit/+/events";
     public static final String TOLLPRICE_REQUEST = "highway/requests/tollprice";
+    public static final String FAULTS = "highway/+/+/+/faults";
 }

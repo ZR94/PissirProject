@@ -11,5 +11,7 @@ public record TripResponse(
         String exitAt,
         Integer amountCents,
         String currency,
+        Double avgSpeedKmh,
+        boolean speeding,
         boolean paid
 ) {}

@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { http } from "@/api/http";
+import type { Tollbooth } from "@/types/tollbooth";
+import { formatTollboothLabel } from "@/utils/tollbooths";
 import { toUserErrorMessage } from "@/utils/userError";
 
 type TollResult = {
@@ -10,11 +12,27 @@ type TollResult = {
   currency: string;
 };
 
-const entry = ref("VC_Est");
-const exit = ref("MI_Ovest");
+const tollbooths = ref<Tollbooth[]>([]);
+const tollboothsLoading = ref(false);
+const tollboothsError = ref<string | null>(null);
+const entry = ref("");
+const exit = ref("");
 const result = ref<TollResult | null>(null);
 const error = ref<string | null>(null);
 const loading = ref(false);
+const sameTollbooth = computed(() => !!entry.value && entry.value === exit.value);
+const canCalculate = computed(
+  () => !loading.value && !!entry.value && !!exit.value && !sameTollbooth.value,
+);
+
+function hasTollbooth(id: string): boolean {
+  return tollbooths.value.some((tb) => tb.id === id);
+}
+
+function tollboothLabel(id: string): string {
+  const tollbooth = tollbooths.value.find((tb) => tb.id === id);
+  return tollbooth ? formatTollboothLabel(tollbooth) : id;
+}
 
 function formatAmount(cents: number, currency: string): string {
   return new Intl.NumberFormat("it-IT", {
@@ -38,6 +56,30 @@ async function calculate() {
     loading.value = false;
   }
 }
+
+async function loadTollbooths() {
+  tollboothsLoading.value = true;
+  tollboothsError.value = null;
+  try {
+    const res = await http.get<Tollbooth[]>("/api/infrastructure/tollbooths");
+    tollbooths.value = res.data;
+    const first = tollbooths.value[0]?.id;
+    const second = tollbooths.value[1]?.id;
+    if (first) {
+      if (!entry.value || !hasTollbooth(entry.value)) entry.value = first;
+      if (!exit.value || !hasTollbooth(exit.value)) {
+        exit.value = second ?? first;
+      }
+    }
+  } catch (e: unknown) {
+    tollbooths.value = [];
+    tollboothsError.value = toUserErrorMessage(e, "Unable to load tollbooths.");
+  } finally {
+    tollboothsLoading.value = false;
+  }
+}
+
+onMounted(loadTollbooths);
 </script>
 
 <template>
@@ -51,23 +93,38 @@ async function calculate() {
     <section class="card">
       <div class="grid">
         <label>
-          Entry
-          <input v-model="entry" />
+          Entry tollbooth
+          <select
+            v-model="entry"
+            :disabled="tollboothsLoading || tollbooths.length === 0"
+          >
+            <option value="" disabled>Select tollbooth</option>
+            <option v-for="tb in tollbooths" :key="`entry-${tb.id}`" :value="tb.id">{{ formatTollboothLabel(tb) }}</option>
+          </select>
         </label>
         <label>
-          Exit
-          <input v-model="exit" />
+          Exit tollbooth
+          <select
+            v-model="exit"
+            :disabled="tollboothsLoading || tollbooths.length === 0"
+          >
+            <option value="" disabled>Select tollbooth</option>
+            <option v-for="tb in tollbooths" :key="`exit-${tb.id}`" :value="tb.id">{{ formatTollboothLabel(tb) }}</option>
+          </select>
         </label>
       </div>
-      <button class="btn" :disabled="loading" @click="calculate()">
+      <button class="btn" :disabled="!canCalculate" @click="calculate()">
         {{ loading ? "Calculating..." : "Calculate" }}
       </button>
       <p v-if="loading" class="hint-live">Checking route matrix...</p>
+      <p v-if="tollboothsLoading" class="hint-live">Loading tollbooths...</p>
+      <p v-else-if="sameTollbooth" class="hint-live">Entry and exit tollbooth must be different.</p>
+      <p v-else-if="tollboothsError" class="err">{{ tollboothsError }}</p>
 
       <p v-if="error" class="err">{{ error }}</p>
       <div v-if="result" class="result">
-        <p><span>Entry booth</span><strong>{{ result.entryTollboothId }}</strong></p>
-        <p><span>Exit booth</span><strong>{{ result.exitTollboothId }}</strong></p>
+        <p><span>Entry booth</span><strong>{{ tollboothLabel(result.entryTollboothId) }}</strong></p>
+        <p><span>Exit booth</span><strong>{{ tollboothLabel(result.exitTollboothId) }}</strong></p>
         <p><span>Amount</span><strong>{{ formatAmount(result.amountCents, result.currency) }}</strong></p>
         <p><span>Currency</span><strong>{{ result.currency }}</strong></p>
       </div>
@@ -132,7 +189,8 @@ label {
   color: var(--ink-1);
 }
 
-input {
+input,
+select {
   border: 1px solid color-mix(in oklab, var(--line-0) 80%, var(--brand-cobalt) 20%);
   border-radius: 8px;
   padding: 0.45rem 0.55rem;
@@ -140,7 +198,8 @@ input {
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
-input:focus-visible {
+input:focus-visible,
+select:focus-visible {
   border-color: color-mix(in oklab, var(--line-0) 60%, var(--brand-cobalt) 40%);
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand-cobalt) 18%, transparent);
   outline: none;
@@ -213,7 +272,8 @@ input:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .toll-page,
   .btn,
-  input {
+  input,
+  select {
     animation: none;
     transition: none;
   }

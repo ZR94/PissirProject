@@ -2,6 +2,7 @@ package upo.pissir.mqtt;
 
 import org.eclipse.paho.client.mqttv3.*;
 import upo.pissir.json.Json;
+import upo.pissir.service.FaultService;
 import upo.pissir.service.TollProcessingService;
 import javax.net.ssl.SSLSocketFactory;
 import java.nio.charset.StandardCharsets;
@@ -15,12 +16,21 @@ public class MqttListenerService {
 
     private final MqttConfig cfg;
     private final TollProcessingService processingService;
+    private final FaultService faultService;
+    private final MqttPublisher publisher;
 
     private MqttClient client;
 
-    public MqttListenerService(MqttConfig cfg, TollProcessingService processingService) {
+    public MqttListenerService(
+            MqttConfig cfg,
+            TollProcessingService processingService,
+            FaultService faultService,
+            MqttPublisher publisher
+    ) {
         this.cfg = cfg;
         this.processingService = processingService;
+        this.faultService = faultService;
+        this.publisher = publisher;
     }
 
     public void start() {
@@ -66,10 +76,11 @@ public class MqttListenerService {
             client.subscribe(MqttTopics.ENTRY_EVENTS, 1);
             client.subscribe(MqttTopics.EXIT_EVENTS, 1);
             client.subscribe(MqttTopics.TOLLPRICE_REQUEST, 1);
+            client.subscribe(MqttTopics.FAULTS, 1);
 
             System.out.println("MQTT connected: " + brokerUri);
             System.out.println("Subscribed: " + MqttTopics.ENTRY_EVENTS + ", " + MqttTopics.EXIT_EVENTS + ", "
-                    + MqttTopics.TOLLPRICE_REQUEST);
+                    + MqttTopics.TOLLPRICE_REQUEST + ", " + MqttTopics.FAULTS);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to start MQTT listener", e);
         }
@@ -99,6 +110,11 @@ public class MqttListenerService {
             return;
         }
 
+        if ("faults".equals(parsed.leaf())) {
+            handleFault(parsed, body);
+            return;
+        }
+
         // Entry/Exit events
         if (!"events".equals(parsed.leaf()))
             return;
@@ -111,6 +127,19 @@ public class MqttListenerService {
         }
     }
 
+    private void handleFault(TopicParser.Parsed parsed, Map<String, Object> body) {
+        String type = Json.getString(body, "type");
+        if (!"DEVICE_FAULT".equals(type)) {
+            return;
+        }
+        try {
+            long id = faultService.recordFault(parsed.tollboothId(), parsed.direction(), parsed.channel(), body);
+            System.out.println("Recorded device fault id=" + id + " tollbooth=" + parsed.tollboothId());
+        } catch (Exception e) {
+            System.out.println("Ignoring invalid DEVICE_FAULT: " + e.getMessage());
+        }
+    }
+
     private void handleTollPriceRequest(Map<String, Object> body) {
         String correlationId = Json.getString(body, "correlationId");
         String replyTopic = Json.getString(body, "replyTopic");
@@ -120,29 +149,24 @@ public class MqttListenerService {
             return;
         }
 
-        int amount = processingService.computeTollPrice(body);
+        TollProcessingService.TollPriceResolved resolved = processingService.resolveTollPrice(body);
 
         Map<String, Object> resp = new HashMap<>();
         resp.put("timestamp", Instant.now().toString());
         resp.put("type", "TOLLPRICE_RESPONSE");
         resp.put("correlationId", correlationId);
-        resp.put("amountCents", amount);
-        resp.put("currency", "EUR");
-
-        publish(replyTopic, Json.toJson(resp), 1);
-    }
-
-    private void publish(String topic, String jsonPayload, int qos) {
-        try {
-            if (client == null || !client.isConnected()) {
-                System.out.println("Cannot publish, MQTT not connected");
-                return;
-            }
-            MqttMessage msg = new MqttMessage(jsonPayload.getBytes(StandardCharsets.UTF_8));
-            msg.setQos(qos);
-            client.publish(topic, msg);
-        } catch (Exception e) {
-            System.out.println("Publish failed: " + e.getMessage());
+        resp.put("amountCents", resolved.amountCents());
+        resp.put("currency", resolved.currency());
+        if (resolved.entryTollboothId() != null) {
+            resp.put("entryTollboothId", resolved.entryTollboothId());
         }
+        if (resolved.plate() != null) {
+            resp.put("plate", resolved.plate());
+        }
+        if (resolved.entryAt() != null) {
+            resp.put("entryAt", resolved.entryAt().toString());
+        }
+
+        publisher.publish(replyTopic, Json.toJson(resp), 1);
     }
 }

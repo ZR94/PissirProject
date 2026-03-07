@@ -77,7 +77,7 @@ Regola anti-ridondanza:
 Payload:
 - timestamp (required)
 - type = `"ENTRY_MANUAL_COMMAND"` (required)
-- plate (required)
+- plate (optional, ignored by toll logic because plate is read by camera)
 
 Example:
 ```json
@@ -99,8 +99,8 @@ Example:
 Schema:
 - timestamp (required)
 - type = `"ENTRY_TELEPASS_COMMAND"` (required)
-- plate (required)
 - telepassId (required)
+- plate (optional, ignored by toll logic because plate is read by camera)
 
 Example:
 ```json
@@ -111,6 +111,10 @@ Example:
   "telepassId": "TP-000045"
 }
 ```
+
+Compatibilità:
+- sui topic di ingresso è accettato anche `type = "REQUEST_ENTRY"` (legacy).
+- sui topic di uscita è accettato anche `type = "REQUEST_EXIT"` (legacy).
 
 ### Command Manual exit
 
@@ -241,6 +245,7 @@ Example:
 - Publisher: `toll`
 - Subscribers: `server`
 - Purpose: uscita telepass (debito da riscuotere/registrare)
+- Nota: prima della pubblicazione di `EXIT_COMPLETED`, il dispositivo di uscita telepass richiede la lettura targa alla camera sul canale `exit`.
 - Nota: su `EXIT_COMPLETED` in modalità telepass il backend registra un debito telepass associato a `telepassId` e `amountCents` (debito da riscuotere lato gestionale).
 
 Schema:
@@ -249,6 +254,7 @@ Schema:
 - entryTollboothId (required)
 - telepassId (string, required)
 - amountCents (integer, required)
+- plate (string, optional)
 
 Example:
 ```json
@@ -257,7 +263,8 @@ Example:
   "type": "EXIT_COMPLETED",
   "entryTollboothId": "VC_Est",
   "telepassId": "TP-000045",
-  "amountCents": 720
+  "amountCents": 720,
+  "plate": "AB123CD"
 }
 ```
 
@@ -276,10 +283,14 @@ Schema:
 - type = "TOLLPRICE_REQUEST" (required)
 - correlationId (string, required)
 - replyTopic (required)
-- entryTollboothId (string, required)
+- entryTollboothId (string, optional)
 - exitTollboothId (string, required)
 - ticketId (string, optional)
 - telepassId (string, optional)
+
+Regola:
+- almeno uno tra `entryTollboothId`, `ticketId`, `telepassId` deve essere presente.
+- se manca `entryTollboothId`, il server lo risolve da viaggio attivo cercando `ticketId` o `telepassId`.
 
 Example:
 ```json
@@ -308,6 +319,9 @@ Schema:
 - correlationId (string, required)
 - amountCents (required)
 - currency = "EUR" (required)
+- entryTollboothId (string, optional)
+- plate (string, optional)
+- entryAt (string ISO-8601, optional)
 
 Example:
 ```json
@@ -315,6 +329,9 @@ Example:
   "timestamp": "2026-01-24T19:05:02Z",
   "type": "TOLLPRICE_RESPONSE",
   "correlationId": "c6f1df7b-3d5e-4d1c-bb11-8c8e45fb4cc7",
+  "entryTollboothId": "VC_Est",
+  "plate": "AB123CD",
+  "entryAt": "2026-01-24T18:30:03Z",
   "amountCents": 720,
   "currency": "EUR"
 }
@@ -329,7 +346,7 @@ Example:
 
 ### Camera requests
 
-- Topic: `highway/{tollboothId}/entry/camera/requests`
+- Topic: `highway/{tollboothId}/{entry|exit}/camera/requests`
 
 - Publisher: `toll`
 - Subscribers: `camera`
@@ -337,9 +354,15 @@ Example:
 
 Schema:
 - timestamp (string, required)
-- type = "CAMERA_REQUEST" (required)
+- type = "CAMERA_REQUEST" oppure "CAMERA_PLATE_REQUEST" (required)
 - correlationId (string, required)
-- cameraId (string, required)
+- channel (string, optional: "manual" | "telepass")
+- passId (string, optional: ticketId/telepassId associato alla richiesta)
+
+Regole:
+- `direction` è ricavata dal topic (entry/exit), non dal payload.
+- se `channel` non è presente, `camera-service` prova a inferirlo da `passId`
+  (`TCK-*` -> manual, altrimenti telepass).
 
 Example:
 ```json
@@ -347,39 +370,14 @@ Example:
   "timestamp": "2026-01-24T18:29:59Z",
   "type": "CAMERA_REQUEST",
   "correlationId": "e1c0f2f1-03c2-4e2b-8d5d-6aab6a1ff3b2",
-  "cameraId": "CAM-VC-ENTRY-01"
+  "channel": "manual",
+  "passId": "TCK-9F2A3B"
 }
 ```
 
-### Camera response manual
+### Camera response
 
-- Topic:`highway/{tollboothId}/entry/manual/responses`
-
-- Publisher: `camera`
-- Subscribers: `toll`
-- Purpose: risultato riconoscimento targa
-
-Schema:
-- timestamp (string, required)
-- type = "CAMERA_RESPONSE"
-- correlationId (string, required)
-- plate (string, required)
-- confidence (number, required)
-
-Example:
-```json
-{
-  "timestamp": "2026-01-24T18:30:00Z",
-  "type": "CAMERA_RESPONSE",
-  "correlationId": "e1c0f2f1-03c2-4e2b-8d5d-6aab6a1ff3b2",
-  "plate": "AB123CD",
-  "confidence": 0.97
-}
-```
-
-### Camera response telepass
-
-- Topic: `highway/{tollboothId}/entry/telepass/responses`
+- Topic:`highway/{tollboothId}/{entry|exit}/{manual|telepass}/responses`
 
 - Publisher: `camera`
 - Subscribers: `toll`
@@ -391,6 +389,8 @@ Schema:
 - correlationId (string, required)
 - plate (string, required)
 - confidence (number, required)
+- passId (string, optional, legacy compatibility)
+- direction (string, optional, legacy compatibility)
 
 Example:
 ```json
@@ -399,7 +399,9 @@ Example:
   "type": "CAMERA_RESPONSE",
   "correlationId": "e1c0f2f1-03c2-4e2b-8d5d-6aab6a1ff3b2",
   "plate": "AB123CD",
-  "confidence": 0.97
+  "confidence": 0.97,
+  "passId": "TP-000045",
+  "direction": "exit"
 }
 ```
 
@@ -415,17 +417,48 @@ Example:
 
 Schema:
 - timestamp (string, required)
-- type = "EXIT_STATE" (required)
-- state (string, required) = "WAITING_PAYMENT" | "PAID" | "GATE_OPEN"
+- type (string, required) uno tra:
+  - "EXIT_PENDING_PRICE"
+  - "REQUEST_PAYMENT"
+  - "PAYMENT_REJECTED"
+  - "PAYMENT_ACCEPTED"
+  - "EXIT_REJECTED"
+- ticketId (string, opzionale in base al type)
+- amountCents / amountCentsDue (integer, opzionali in base al type)
+- currency (string, opzionale)
+- entryTollboothId, plate, entryAt (opzionali su REQUEST_PAYMENT)
+- reason (string, opzionale su messaggi rejected)
 
 Example:
 ```json
 {
   "timestamp": "2026-01-24T19:05:12Z",
-  "type": "EXIT_STATE",
-  "state": "GATE_OPEN"
+  "type": "REQUEST_PAYMENT",
+  "ticketId": "TCK-9F2A3B",
+  "entryTollboothId": "VC_Est",
+  "plate": "AB123CD",
+  "entryAt": "2026-01-24T18:30:03Z",
+  "amountCents": 720,
+  "currency": "EUR"
 }
 ```
+
+### State tollbooth telepass exit
+
+- Topic: `highway/{tollboothId}/exit/telepass/state`
+- Publisher: `toll`
+- Subscribers: `user` (UI/simulator)
+- Purpose: aggiornamento avanzamento uscita telepass
+
+Schema:
+- timestamp (string, required)
+- type (string, required) uno tra:
+  - "EXIT_PENDING_VALIDATION"
+  - "EXIT_COMPLETED_UI"
+  - "EXIT_REJECTED"
+- telepassId (string, opzionale in base al type)
+- amountCents, currency, plate (opzionali su EXIT_COMPLETED_UI)
+- reason (string, opzionale su EXIT_REJECTED)
 
 # 5 ACL mapping (utente → read/write)
 
@@ -486,4 +519,4 @@ Example:
 - On ENTRY_ACCEPTED (telepass): create active trip linked to telepassId with entry tollboothId from topic.
 - On EXIT_COMPLETED (manual): close trip located by ticketId, store entryTollboothId from payload and exit tollboothId from topic, mark paid=true.
 - On EXIT_COMPLETED (telepass): close trip located by telepassId, store entryTollboothId from payload and exit tollboothId from topic, create telepass debt (open).
-- On tollprice request: lookup fare by (entryTollboothId, exitTollboothId) and publish TOLLPRICE_RESPONSE to replyTopic
+- On tollprice request: resolve entry tollbooth from request or active trip (ticketId/telepassId), lookup fare by (entryTollboothId, exitTollboothId), publish TOLLPRICE_RESPONSE to replyTopic with amount and trip details (when available)

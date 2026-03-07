@@ -1,7 +1,6 @@
 package upo.pissir.dto;
 
-public record CreateTollboothRequest(
-        String id,
+public record UpdateTollboothRequest(
         String roadCode,
         Double kmMarker,
         String region,

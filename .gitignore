@@ -1,4 +1,6 @@
-docker/
+docker/**
+!docker/
+!docker/docker-compose.field.yml
 gradle/
 build/
 .gradle/

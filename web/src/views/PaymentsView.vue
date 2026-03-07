@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { http } from "@/api/http";
 import { useAuthStore } from "@/stores/auth";
 import { toUserErrorMessage } from "@/utils/userError";
@@ -27,6 +27,10 @@ const summary = ref<Summary | null>(null);
 const payDebtId = ref<number | null>(null);
 const msg = ref<string | null>(null);
 const error = ref<string | null>(null);
+const canLoadDebts = computed(() => telepassId.value.trim().length > 0);
+const canPayDebt = computed(
+  () => payDebtId.value != null && Number.isFinite(payDebtId.value) && payDebtId.value > 0,
+);
 
 function setError(e: unknown) {
   error.value = toUserErrorMessage(e, "Payments request failed.");
@@ -39,9 +43,15 @@ function formatAmount(cents: number, currency: string): string {
   }).format(cents / 100);
 }
 
-async function loadDebts() {
+function debtStatusClass(status: string): string {
+  if (status === "PAID") return "pill pill--ok";
+  if (status === "OPEN") return "pill pill--warn";
+  return "pill";
+}
+
+async function loadDebts(clearFeedback = true) {
   error.value = null;
-  msg.value = null;
+  if (clearFeedback) msg.value = null;
   debts.value = [];
   try {
     const res = await http.get<Debt[]>(`/api/payments/telepass/${telepassId.value}/debts`);
@@ -53,13 +63,13 @@ async function loadDebts() {
 }
 
 async function payDebt() {
-  if (!payDebtId.value) return;
+  if (!canPayDebt.value) return;
   error.value = null;
   msg.value = null;
   try {
     await http.post(`/api/payments/debts/${payDebtId.value}/pay`);
     msg.value = `Debt #${payDebtId.value} paid successfully.`;
-    await loadDebts();
+    await loadDebts(false);
   } catch (e: unknown) {
     setError(e);
   }
@@ -90,12 +100,13 @@ async function loadSummary() {
       <article class="card">
         <h3>Debts By Telepass</h3>
         <div class="inline">
-          <input v-model="telepassId" placeholder="Telepass ID" />
-          <button class="btn" @click="loadDebts()">Load</button>
+          <input v-model="telepassId" placeholder="Telepass ID (required)" />
+          <button class="btn" :disabled="!canLoadDebts" @click="loadDebts()">Load debts</button>
         </div>
         <ul v-if="debts.length > 0">
           <li v-for="d in debts" :key="d.id">
-            #{{ d.id }} {{ d.telepassId }} - {{ formatAmount(d.amountCents, d.currency) }} - {{ d.status }}
+            #{{ d.id }} {{ d.telepassId }} - {{ formatAmount(d.amountCents, d.currency) }} -
+            <span :class="debtStatusClass(d.status)">{{ d.status }}</span>
           </li>
         </ul>
         <p v-else class="empty">No debts loaded. Search by telepass to start.</p>
@@ -104,8 +115,8 @@ async function loadSummary() {
       <article class="card">
         <h3>Pay Debt</h3>
         <div class="inline">
-          <input v-model.number="payDebtId" type="number" min="1" placeholder="Debt ID" />
-          <button class="btn" @click="payDebt()">Pay</button>
+          <input v-model.number="payDebtId" type="number" min="1" placeholder="Debt ID (required)" />
+          <button class="btn" :disabled="!canPayDebt" @click="payDebt()">Pay debt</button>
         </div>
       </article>
 
@@ -217,6 +228,13 @@ input:focus-visible {
   box-shadow: 0 12px 20px -16px color-mix(in oklab, var(--brand-cobalt) 70%, transparent);
 }
 
+.btn:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 ul {
   margin: 0;
   padding-left: 1rem;
@@ -224,6 +242,27 @@ ul {
 
 li {
   color: color-mix(in oklab, var(--ink-0) 85%, var(--brand-moss) 15%);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in oklab, var(--line-0) 84%, var(--brand-cobalt) 16%);
+  border-radius: 999px;
+  padding: 0.07rem 0.48rem;
+  font-size: 0.72rem;
+  font-weight: 640;
+  background: color-mix(in oklab, var(--bg-0) 90%, var(--brand-cobalt) 10%);
+}
+
+.pill--ok {
+  border-color: color-mix(in oklab, var(--state-ok) 48%, var(--line-0) 52%);
+  background: color-mix(in oklab, var(--bg-0) 78%, var(--state-ok) 22%);
+}
+
+.pill--warn {
+  border-color: color-mix(in oklab, var(--state-warn) 56%, var(--line-0) 44%);
+  background: color-mix(in oklab, var(--bg-0) 74%, var(--state-warn) 26%);
 }
 
 .summary {

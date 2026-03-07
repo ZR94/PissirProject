@@ -7,8 +7,10 @@ import upo.pissir.auth.AuthUser;
 import upo.pissir.auth.Role;
 import upo.pissir.dto.ErrorResponse;
 import upo.pissir.routes.Routes;
+import upo.pissir.service.FaultService;
 import upo.pissir.service.InfrastructureService;
 import upo.pissir.service.PaymentService;
+import upo.pissir.service.ReportService;
 import upo.pissir.service.TollQueryService;
 
 
@@ -20,7 +22,9 @@ public final class HttpServer {
       int port,
       InfrastructureService infrastructureService,
       TollQueryService tollQueryService,
-      PaymentService paymentService
+      PaymentService paymentService,
+      ReportService reportService,
+      FaultService faultService
   ) {
     Javalin app = Javalin.create(cfg -> {
       cfg.http.defaultContentType = "application/json";
@@ -65,7 +69,7 @@ public final class HttpServer {
       ctx.json(java.util.Map.of("ok", true, "msg", "admin pong"));
     });
 
-    Routes.register(app, infrastructureService, tollQueryService, paymentService);
+    Routes.register(app, infrastructureService, tollQueryService, paymentService, reportService, faultService);
     app.start(port);
   }
 

@@ -100,4 +100,16 @@ public class FareRepository {
             throw new IllegalStateException("DB error (deleteFare)", e);
         }
     }
+
+    public int deleteByTollboothId(String tollboothId) {
+        String sql = "DELETE FROM fares WHERE entry_tollbooth_id = ? OR exit_tollbooth_id = ?";
+        try (Connection c = ds.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, tollboothId);
+            ps.setString(2, tollboothId);
+            return ps.executeUpdate();
+        } catch (Exception e) {
+            throw new IllegalStateException("DB error (deleteByTollboothId)", e);
+        }
+    }
 }
